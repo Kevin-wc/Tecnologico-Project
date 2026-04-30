@@ -84,7 +84,8 @@ public final class ProcessTriangles {
 
         try {
             // Parent opens store once to validate input
-            ps = openPointStore(filename);
+            // Changed using shared method from TriangleUtil after optimizations from TEC feedback
+            ps = TriangleUtil.openPointStore(filename);
             final int n = ps.numPoints();
 
             // If fewer than 3 points, answer is 0
@@ -113,8 +114,18 @@ public final class ProcessTriangles {
             final String javaHome = System.getProperty("java.home");
             final String javaCommand = javaHome + "/bin/java";
 
+            // Store all child processes so they can run concurrently
+            final Process[] processes = new Process[numProcesses];
+
+            // Store outputs and errors from each worker
+            final String[] outputs = new String[numProcesses];
+            final String[] errors = new String[numProcesses];
+
             long total = 0;
 
+            // Optimizations from TEC feedback mentioned basically changing the for loop
+            // into 2 phases instead of the old one which would wait for a process to start
+            // and finish until the next one starts. Now they execute in parallel
             for (int p = 0; p < numProcesses; p++) {
                 final int startI = p * chunkSize;
                 final int endI = Math.min(startI + chunkSize, end);
@@ -135,45 +146,55 @@ public final class ProcessTriangles {
 
                 // Don't merge stderr into stdout
                 final Process child = pb.start();
+            }
 
-                // Read worker's one line numeric result
-                final String outLine;
-                try (BufferedReader out = new BufferedReader(new InputStreamReader(child.getInputStream()))) {
-                    outLine = out.readLine();
+            // This is the 2nd phases that collects results from ewach worker
+            // Since all processes started in phase 1 everything runs at the same time
+            for (int p = 0; p < numProcesses; p++) {
+                final Process child = processes[p];
+                if (child == null) {
+                    continue;
                 }
 
-                // Read stderr (useful message if worker fails)
-                final String errLine;
-                try (BufferedReader err = new BufferedReader(new InputStreamReader(child.getErrorStream()))) {
-                    errLine = err.readLine();
+                // Read standard output the partial triangle count
+                try (BufferedReader out = new BufferedReader(
+                        new InputStreamReader(child.getInputStream()))) {
+                    outputs[p] = out.readLine();
                 }
 
+                // Read standard error in case the worker failed
+                try (BufferedReader err = new BufferedReader(
+                        new InputStreamReader(child.getErrorStream()))) {
+                    errors[p] = err.readLine();
+                }
+
+                // Wait for the process to finish execution
                 final int code = child.waitFor();
+
+                // Handle worker failure
                 if (code != 0) {
-                    if (errLine != null && !errLine.isEmpty()) {
-                        System.err.println("Error: worker failed: " + errLine);
+                    if (errors[p] != null && !errors[p].isEmpty()) {
+                        System.err.println("Error: worker failed: " + errors[p]);
                     } else {
                         System.err.println("Error: worker exited with code " + code);
                     }
                     System.exit(EXIT_WORKER);
-                    return;
                 }
 
-                if (outLine == null) {
+                // Makes sure the worker produced output
+                if (outputs[p] == null) {
                     System.err.println("Error: worker returned no output.");
                     System.exit(EXIT_WORKER);
-                    return;
                 }
 
-                long partial;
+                // Parse and accumulate the partial result
                 try {
-                    partial = Long.parseLong(outLine.trim());
+                    long partial = Long.parseLong(outputs[p].trim());
+                    total += partial;
                 } catch (Exception e) {
                     System.err.println("Error: worker returned invalid output.");
                     System.exit(EXIT_WORKER);
-                    return;
                 }
-                total += partial;
             }
 
             // Sucess output
@@ -224,7 +245,8 @@ public final class ProcessTriangles {
         PointStore ps = null;
 
         try {
-            ps = openPointStore(filename);
+            // Changed using shared method from TriangleUtil after optimizations from TEC feedback
+            ps = TriangleUtil.openPointStore(filename);
 
             final long partial = TriangleUtil.countRange(ps, startI, endI);
 
@@ -249,17 +271,5 @@ public final class ProcessTriangles {
             }
         }
     }
-
-    /**
-     * Chooses BinPointStore for ".dat" files
-     */
-    private static PointStore openPointStore(final String filename)
-        throws Exception {
-        if (filename != null && filename.endsWith(".dat")) {
-            return new BinPointStore(filename);
-        }
-        return new TextPointStore(filename);
-    }
-
 }
 

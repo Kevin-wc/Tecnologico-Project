@@ -87,7 +87,7 @@ public final class BinPointStore implements PointStore {
     // Added checkBounds helper since TEC mentioned that getX() and getY() repeat
     // the same bound check
     private void checkBounds(final int idx) {
-        if (idx < 0 || idc >= n) {
+        if (idx < 0 || idx >= n) {
             throw new IndexOutOfBoundsException();
         }
     }

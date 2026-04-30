@@ -63,8 +63,8 @@ public final class Triangles {
 
         try {
             // Open correct store based on filename
-
-            ps = openPointStore(filename);
+            // Changed using shared method from TriangleUtil after optimizations from TEC feedback
+            ps = TriangleUtil.openPointStore(filename);
             // TEC mentioned that Triangles calls countRange(ps, 0, n-2) even when n < 3
             // So adding this guard will make it consistent with other classes.
             // This is my oldest code which makes sense that it lacked this.
@@ -100,18 +100,6 @@ public final class Triangles {
                 }
             }
         }
-    }
-
-    /**
-     * Chooses BinPointStore for ".dat" files
-     */
-    private static PointStore openPointStore(final String filename)
-            throws IOException, FileNotFoundException, TriangleUtil.InputFormatException {
-
-        if (filename != null && filename.endsWith(".dat")) {
-            return new BinPointStore(filename);
-        }
-        return new TextPointStore(filename);
     }
 
     /**

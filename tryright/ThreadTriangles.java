@@ -88,8 +88,8 @@ public final class ThreadTriangles {
         PointStore ps = null;
 
         try {
-
-            ps = openPointStore(filename);
+            // Changed using shared method from TriangleUtil after optimizations from TEC feedback
+            ps = TriangleUtil.openPointStore(filename);
             final PointStore store = ps;
 
             final int n = ps.numPoints();
@@ -173,14 +173,5 @@ public final class ThreadTriangles {
                 try { ps.close(); } catch (Exception ignored) {}
             }
         }
-    }
-
-    private static PointStore openPointStore(final String filename)
-        throws IOException, FileNotFoundException, TriangleUtil.InputFormatException {
-
-        if (filename != null && filename.endsWith(".dat")) {
-            return new BinPointStore(filename);
-        }
-        return new TextPointStore(filename);
     }
 }

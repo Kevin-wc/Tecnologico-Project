@@ -8,6 +8,9 @@ package com.tryright;
  *
  ************************************************/
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
 /**
  * Utility class containing the shared logic for counting right triangles, and avoid repetition as
  * instructed.
@@ -99,6 +102,20 @@ public final class TriangleUtil {
             }
         }
         return count;
+    }
+
+    /**
+     * Chooses BinPointStore for ".dat" files
+     * Added here because TEC mentioned it would be a good optimization as a shared static helper function.
+     * Allows it to only be in TriangleUtil instead of being in 3 other classes
+     */
+    static PointStore openPointStore(final String filename)
+            throws IOException, FileNotFoundException, TriangleUtil.InputFormatException {
+
+        if (filename != null && filename.endsWith(".dat")) {
+            return new BinPointStore(filename);
+        }
+        return new TextPointStore(filename);
     }
 
     /**
