@@ -16,13 +16,17 @@ import java.nio.channels.FileChannel;
 /**
  * PointStore implementation for binary-encoded point files.
  *
- * <p>Binary format:
+ * <p>
+ * Binary format:
  * Zero or more pairs of 4-byte big-endian, two's-complement integers (x then y)
- * Total file size must be a multiple of 8 bytes.</p>
+ * Total file size must be a multiple of 8 bytes.
+ * </p>
  *
- * <p>this store uses memory-mapped I/O as required</p>
+ * <p>
+ * this store uses memory-mapped I/O as required
+ * </p>
  */
-public final class BinPointStore implements PointStore{
+public final class BinPointStore implements PointStore {
     private static final int INT_SIZE = 4;
     private static final int POINT_SIZE = 8;
 
@@ -35,11 +39,12 @@ public final class BinPointStore implements PointStore{
      * Construct a BinPointStore from a binary-encoded file.
      *
      * @param filename input file path
-     * @throws IOException if the file cannot be opened/read/mapped
+     * @throws IOException                       if the file cannot be
+     *                                           opened/read/mapped
      * @throws TriangleUtil.InputFormatException if binary format is invalid
      */
     public BinPointStore(final String filename)
-        throws IOException, TriangleUtil.InputFormatException {
+            throws IOException, TriangleUtil.InputFormatException {
 
         this.file = new RandomAccessFile(filename, "r");
         this.channel = file.getChannel();
@@ -61,30 +66,34 @@ public final class BinPointStore implements PointStore{
 
         this.n = (int) numPts;
 
-        //Map the whole file read-only.
+        // Map the whole file read-only.
         this.buffer = channel.map(FileChannel.MapMode.READ_ONLY, 0, sizeBytes);
     }
 
     @Override
-    public int getX(final int idx)  {
-        if (idx < 0 || idx >= n){
-            throw new IndexOutOfBoundsException();
-        }
+    public int getX(final int idx) {
+        checkBounds(idx);
         final int offset = idx * POINT_SIZE;
         return buffer.getInt(offset);
     }
 
     @Override
-    public int getY(final int idx)  {
-        if (idx < 0 || idx >= n){
-            throw new IndexOutOfBoundsException();
-        }
+    public int getY(final int idx) {
+        checkBounds(idx);
         final int offset = idx * POINT_SIZE + INT_SIZE;
         return buffer.getInt(offset);
     }
 
+    // Added checkBounds helper since TEC mentioned that getX() and getY() repeat
+    // the same bound check
+    private void checkBounds(final int idx) {
+        if (idx < 0 || idc >= n) {
+            throw new IndexOutOfBoundsException();
+        }
+    }
+
     @Override
-    public int numPoints()  {
+    public int numPoints() {
         return n;
     }
 
@@ -95,8 +104,13 @@ public final class BinPointStore implements PointStore{
     }
 
     private void closeQuietly() {
-        try { channel.close(); } catch (Exception ignored) { }
-        try { file.close(); } catch (Exception ignored) { }
+        try {
+            channel.close();
+        } catch (Exception ignored) {
+        }
+        try {
+            file.close();
+        } catch (Exception ignored) {
+        }
     }
 }
-

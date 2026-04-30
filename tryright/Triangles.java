@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-
 /************************************************
  *
  * Author: Kevin Gonzalez
@@ -29,7 +28,8 @@ public final class Triangles {
     /**
      * Program entry point.
      *
-     * @param args command-line arguments; must contain exactly one value: the input filename
+     * @param args command-line arguments; must contain exactly one value: the input
+     *             filename
      */
     public static void main(final String[] args) {
         // Validate command-line arguments
@@ -65,9 +65,16 @@ public final class Triangles {
             // Open correct store based on filename
 
             ps = openPointStore(filename);
-
+            // TEC mentioned that Triangles calls countRange(ps, 0, n-2) even when n < 3
+            // So adding this guard will make it consistent with other classes.
+            // This is my oldest code which makes sense that it lacked this.
             final int n = ps.numPoints();
-            final long answer = TriangleUtil.countRange(ps, 0 , n - 2);
+            if (n < 3) {
+                System.out.println(0);
+                System.exit(EXIT_OK);
+                return;
+            }
+            final long answer = TriangleUtil.countRange(ps, 0, n - 2);
 
             // Success output: one number only
             System.out.println(answer);
@@ -87,7 +94,10 @@ public final class Triangles {
             System.exit(EXIT_INTERNAL);
         } finally {
             if (ps != null) {
-                try { ps.close(); } catch (Exception ignored) {}
+                try {
+                    ps.close();
+                } catch (Exception ignored) {
+                }
             }
         }
     }
@@ -103,6 +113,7 @@ public final class Triangles {
         }
         return new TextPointStore(filename);
     }
+
     /**
      * Prints a usage message to stderr
      *
@@ -113,5 +124,3 @@ public final class Triangles {
         System.err.println("Usage: java com.tryright.Triangles <inputfile>");
     }
 }
-
-
